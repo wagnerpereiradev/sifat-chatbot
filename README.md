@@ -127,8 +127,4 @@ npm run lint   # checagens de lint
 - A chave `OPENAI_API_KEY` é lida apenas no backend (Next.js API). Não commitá-la no repositório.
 - O store de ferramentas usa persistência local (localStorage) para preferências.
 
-### Licença
-
-Consulte o arquivo `LICENSE` na raiz do projeto.
-
 
