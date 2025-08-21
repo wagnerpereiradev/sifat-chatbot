@@ -20,7 +20,7 @@ export const toolsList = [
   },
   {
     name: "get_sales_details_by_product",
-    description: "Consulta notas de venda de um produto em um período e retorna campos relevantes para análise de horários",
+    description: "Consulta notas de venda de um produto em um período e retorna campos relevantes para análise de horários. Lembre-se, datas relativas como 'HOJE' ou 'ONTEM' são consideradas em relação ao dia atual.",
     parameters: {
       idProdutoEmpresa: {
         type: "string",
