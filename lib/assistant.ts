@@ -156,11 +156,14 @@ export const processMessages = async () => {
   } = useConversationStore.getState();
 
   const tools = getTools();
+  const now = new Date();
+  const currentDate = now.toISOString().slice(0, 10);
+  const developerPromptWithDate = `${DEVELOPER_PROMPT}\n\n[Contexto de tempo]\n- Data atual: ${currentDate}`;
   const allConversationItems = [
     // Adding developer prompt as first item in the conversation
     {
       role: "developer",
-      content: DEVELOPER_PROMPT,
+      content: developerPromptWithDate,
     },
     ...conversationItems,
   ];

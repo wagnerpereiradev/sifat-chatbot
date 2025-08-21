@@ -9,6 +9,7 @@ import MonthInput from "./month-input";
 import TopProductsTable from "./top-products-table";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { coy } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip } from "recharts";
 
 interface ToolCallProps {
   toolCall: ToolCallItem;
@@ -34,16 +35,14 @@ function ApiCallCell({ toolCall }: ToolCallProps) {
       console.error("Error sending message:", e);
     }
   };
-  // Special rendering for top selling products: responsive with horizontal scroll and rounded corners
+  // Special rendering for top selling products: render exactly API fields
   if (toolCall.name === "get_top_selling_products" && toolCall.output) {
     try {
       const parsed = JSON.parse(toolCall.output);
       const items = Array.isArray(parsed?.items) ? parsed.items : [];
       const currency = parsed?.currency || "BRL";
       const fmt = (v: number) =>
-        new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(
-          v
-        );
+        new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(v);
       return (
         <div className="w-full overflow-x-auto rounded-2xl border border-[#0f67b2]/20 bg-white shadow-sm">
           <table className="min-w-full text-sm">
@@ -51,29 +50,27 @@ function ApiCallCell({ toolCall }: ToolCallProps) {
               <tr className="bg-[#0f67b2]/5 text-stone-700">
                 <th className="px-4 py-3 text-left font-medium">#</th>
                 <th className="px-4 py-3 text-left font-medium">Produto</th>
-                <th className="px-4 py-3 text-left font-medium">Código</th>
-                <th className="px-4 py-3 text-right font-medium">Qtd. Vendida</th>
+                <th className="px-4 py-3 text-right font-medium">Quantidade</th>
                 <th className="px-4 py-3 text-right font-medium">Faturamento</th>
-                <th className="px-4 py-3 text-right font-medium">Preço de Venda</th>
+                <th className="px-4 py-3 text-right font-medium">Custo</th>
               </tr>
             </thead>
             <tbody>
               {items.map((p: any, idx: number) => (
                 <tr
-                  key={p.product_id}
+                  key={`${p.produto}-${idx}`}
                   className={idx % 2 === 0 ? "bg-white" : "bg-stone-50"}
                 >
                   <td className="px-4 py-3 text-stone-600">{idx + 1}</td>
-                  <td className="px-4 py-3 font-medium text-stone-800">{p.name}</td>
-                  <td className="px-4 py-3 text-stone-600">{p.product_id}</td>
+                  <td className="px-4 py-3 font-medium text-stone-800">{p.produto}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-stone-700">
-                    {Number(p.quantity_sold).toLocaleString("pt-BR")}
+                    {Number(p.quantidade || 0).toLocaleString("pt-BR")}
                   </td>
-                  <td className="px-4 py-3 text-right tabular-nums text-stone-700" title={String(p.revenue)}>
-                    {fmt(Number(p.revenue))}
+                  <td className="px-4 py-3 text-right tabular-nums text-stone-700" title={String(p.faturamento)}>
+                    {fmt(Number(p.faturamento || 0))}
                   </td>
-                  <td className="px-4 py-3 text-right tabular-nums text-stone-700" title={String(p.selling_price)}>
-                    {fmt(Number(p.selling_price))}
+                  <td className="px-4 py-3 text-right tabular-nums text-stone-700" title={String(p.custo)}>
+                    {fmt(Number(p.custo || 0))}
                   </td>
                 </tr>
               ))}
@@ -83,6 +80,141 @@ function ApiCallCell({ toolCall }: ToolCallProps) {
       );
     } catch {
       // fallthrough to default rendering if parsing fails
+    }
+  }
+
+  // Special rendering for sales details by product
+  if (toolCall.name === "get_sales_details_by_product") {
+    const args = (() => {
+      try {
+        return toolCall.parsedArguments || (toolCall.arguments ? JSON.parse(toolCall.arguments) : {});
+      } catch {
+        return {};
+      }
+    })();
+    const fmtDatePretty = (isoYYYYMMDD?: string) => {
+      if (!isoYYYYMMDD) return "—";
+      try {
+        const d = new Date(`${isoYYYYMMDD}T00:00:00Z`);
+        const weekday = new Intl.DateTimeFormat("pt-BR", { weekday: "long" }).format(d);
+        const date = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).format(d);
+        const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+        return `${date} (${cap(weekday)})`;
+      } catch {
+        return isoYYYYMMDD;
+      }
+    };
+    const renderSummary = (peakHours?: Array<{ hour: string; count: number }>) => (
+      <div className="space-y-3 text-sm">
+        <div>
+          <div className="text-stone-500 text-xs">Produto</div>
+          <div className="text-stone-900 font-semibold">
+            {args?.idProdutoEmpresa || "—"}
+            {args?.nomeProduto ? <span className="text-stone-600 font-normal"> • {args.nomeProduto}</span> : null}
+          </div>
+        </div>
+        <div>
+          <div className="text-stone-500 text-xs">Período</div>
+          <div className="text-stone-800">
+            {fmtDatePretty(args?.dataInicial)}
+            <span className="text-stone-400"> — </span>
+            {fmtDatePretty(args?.dataFinal)}
+          </div>
+        </div>
+        {Array.isArray(peakHours) && peakHours.length > 0 && (
+          <div>
+            <div className="text-stone-500 text-xs mb-1">Horários de pico</div>
+            <div className="flex flex-wrap gap-2">
+              {peakHours.map((h) => (
+                <span key={h.hour} className="inline-flex items-center gap-1 rounded-full bg-[#0f67b2]/10 text-[#0f67b2] px-2.5 py-0.5 text-xs">
+                  <span className="font-medium">{h.hour}h</span>
+                  <span className="text-stone-500">({h.count})</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+
+    if (!toolCall.output) {
+      return (
+        <div className="w-full rounded-2xl border border-[#0f67b2]/20 bg-white shadow-sm p-4">
+          <div className="flex items-center justify-between">
+            <div className="text-stone-800 font-medium">Vendas por produto</div>
+            <div className="inline-flex items-center gap-2 text-stone-500 text-xs"><Clock size={14} className="animate-pulse" /> Carregando...</div>
+          </div>
+          <div className="mt-3">{renderSummary([])}</div>
+        </div>
+      );
+    }
+
+    try {
+      const parsed = JSON.parse(toolCall.output);
+      const hourlyHistogram: Array<{ hour: string; count: number }> = Array.isArray(parsed?.hourlyHistogram) ? parsed.hourlyHistogram : [];
+      const peakHours: Array<{ hour: string; count: number }> = Array.isArray(parsed?.peakHours) ? parsed.peakHours : [];
+      const totalElements: number = parsed?.totalElements ?? 0;
+      const chartData = hourlyHistogram.map((b) => ({ hour: `${b.hour}h`, count: b.count || 0 }));
+      const height = 260;
+
+      const SalesTooltip = ({ active, payload, label }: any) => {
+        if (!active || !payload || payload.length === 0) return null;
+        const value = Number(payload[0].value || 0);
+        return (
+          <div className="rounded-md bg-white px-3 py-2 text-xs shadow-lg border border-stone-200">
+            <div className="text-stone-500 mb-0.5">Horário</div>
+            <div className="text-stone-900 font-semibold mb-1">{label}</div>
+            <div className="flex items-center gap-2">
+              <span className="inline-block h-2 w-2 rounded-full bg-[#0f67b2]"></span>
+              <div className="text-stone-700">
+                {value} venda{value === 1 ? "" : "s"}
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      return (
+        <div className="w-full">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="rounded-2xl border border-[#0f67b2]/20 bg-white shadow-sm p-4">
+              <div className="flex items-center justify-between">
+                <div className="text-stone-800 font-medium">Resumo</div>
+                <div className="text-xs text-stone-500">{totalElements} registros</div>
+              </div>
+              <div className="mt-3">{renderSummary(peakHours)}</div>
+            </div>
+            <div className="md:col-span-2 rounded-2xl border border-[#0f67b2]/20 bg-white shadow-sm p-4">
+              <div className="flex items-center justify-between">
+                <div className="text-stone-800 font-medium">Distribuição por hora</div>
+              </div>
+              <div className="mt-2 overflow-x-auto relative">
+                {hourlyHistogram.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={height}>
+                    <LineChart data={chartData} margin={{ top: 8, right: 16, left: 8, bottom: 16 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="hour"
+                        interval={0}
+                        tickFormatter={(value: any, index: number) => (index % 2 === 0 ? value : "")}
+                        tick={{ fontSize: 12, fontWeight: 600, fill: "#374151" }}
+                        dy={6}
+                      />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#6b7280" }} width={36} />
+                      <Tooltip content={<SalesTooltip />} cursor={{ stroke: '#0f67b2', strokeOpacity: 0.12 }} />
+                      <Line type="monotone" dataKey="count" stroke="#0f67b2" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="text-xs text-stone-500">Sem dados para o período informado.</div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    } catch {
+      // fallthrough to default rendering on parse error
     }
   }
 
@@ -444,11 +576,7 @@ function ApiCallCell({ toolCall }: ToolCallProps) {
                 (() => {
                   try {
                     const parsed = JSON.parse(toolCall.output);
-                    if (
-                      toolCall.name === "get_top_selling_products" &&
-                      parsed &&
-                      Array.isArray(parsed.items)
-                    ) {
+                    if (toolCall.name === "get_top_selling_products" && parsed && Array.isArray(parsed.items)) {
                       return (
                         <div className="text-sm">
                           <TopProductsTable items={parsed.items} currency={parsed.currency || "BRL"} />

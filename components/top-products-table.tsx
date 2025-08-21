@@ -1,11 +1,10 @@
 import React from "react";
 
 type TopProduct = {
-    product_id: string;
-    name: string;
-    quantity_sold: number;
-    revenue: number;
-    selling_price: number;
+    produto: string;
+    quantidade: number;
+    faturamento: number;
+    custo?: number;
 };
 
 interface Props {
@@ -29,30 +28,28 @@ export default function TopProductsTable({ items, currency = "BRL" }: Props) {
                         <tr className="bg-[#0f67b2]/5 text-stone-700">
                             <th className="px-4 py-3 text-left font-medium">#</th>
                             <th className="px-4 py-3 text-left font-medium">Produto</th>
-                            <th className="px-4 py-3 text-left font-medium">Código</th>
-                            <th className="px-4 py-3 text-right font-medium">Qtd. Vendida</th>
+                            <th className="px-4 py-3 text-right font-medium">Quantidade</th>
                             <th className="px-4 py-3 text-right font-medium">Faturamento</th>
-                            <th className="px-4 py-3 text-right font-medium">Preço de Venda</th>
+                            <th className="px-4 py-3 text-right font-medium">Custo</th>
                         </tr>
                     </thead>
                     <tbody>
                         {items.map((p, idx) => (
                             <tr
-                                key={p.product_id}
+                                key={`${p.produto}-${idx}`}
                                 className={idx % 2 === 0 ? "bg-white" : "bg-stone-50"}
 
                             >
                                 <td className="px-4 py-3 text-stone-600">{idx + 1}</td>
-                                <td className="px-4 py-3 font-medium text-stone-800">{p.name}</td>
-                                <td className="px-4 py-3 text-stone-600">{p.product_id}</td>
+                                <td className="px-4 py-3 font-medium text-stone-800">{p.produto}</td>
                                 <td className="px-4 py-3 text-right tabular-nums text-stone-700">
-                                    {p.quantity_sold.toLocaleString("pt-BR")}
+                                    {Number(p.quantidade || 0).toLocaleString("pt-BR")}
                                 </td>
-                                <td className="px-4 py-3 text-right tabular-nums text-stone-700" title={String(p.revenue)}>
-                                    {currencyFormatter(p.revenue, currency)}
+                                <td className="px-4 py-3 text-right tabular-nums text-stone-700" title={String(p.faturamento)}>
+                                    {currencyFormatter(Number(p.faturamento || 0), currency)}
                                 </td>
-                                <td className="px-4 py-3 text-right tabular-nums text-stone-700" title={String(p.selling_price)}>
-                                    {currencyFormatter(p.selling_price, currency)}
+                                <td className="px-4 py-3 text-right tabular-nums text-stone-700" title={String(p.custo)}>
+                                    {currencyFormatter(Number(p.custo || 0), currency)}
                                 </td>
                             </tr>
                         ))}

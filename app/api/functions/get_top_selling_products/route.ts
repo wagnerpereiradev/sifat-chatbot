@@ -1,34 +1,79 @@
-export async function GET() {
+export async function GET(request: Request) {
     try {
-        // TODO: Integrar com sua fonte de dados real (DB/serviço) e aplicar filtros/períodos
-        const baseItems = [
-            { product_id: "P001", name: "Produto A", quantity_sold: 1234, revenue: 45000.5 },
-            { product_id: "P002", name: "Produto B", quantity_sold: 1187, revenue: 38950.0 },
-            { product_id: "P003", name: "Produto C", quantity_sold: 995, revenue: 31210.3 },
-            { product_id: "P004", name: "Produto D", quantity_sold: 876, revenue: 29870.9 },
-            { product_id: "P005", name: "Produto E", quantity_sold: 842, revenue: 28740.2 },
-            { product_id: "P006", name: "Produto F", quantity_sold: 803, revenue: 26890.1 },
-            { product_id: "P007", name: "Produto G", quantity_sold: 771, revenue: 25110.0 },
-            { product_id: "P008", name: "Produto H", quantity_sold: 745, revenue: 24550.8 },
-            { product_id: "P009", name: "Produto I", quantity_sold: 703, revenue: 23220.0 },
-            { product_id: "P010", name: "Produto J", quantity_sold: 690, revenue: 22800.0 },
-        ];
+        const { searchParams } = new URL(request.url);
+        const periodicidade = searchParams.get("periodicidade") || "CUSTOMIZADO";
+        const considerarFaturamento = (searchParams.get("considerarFaturamento") || "true").toLowerCase() === "true";
+        const dataInicial = searchParams.get("dataInicial") || "";
+        const dataFinal = searchParams.get("dataFinal") || "";
 
-        const items = baseItems.map((it) => ({
-            ...it,
-            selling_price: it.revenue / it.quantity_sold,
-        }));
+        // Validação mínima
+        // Se CUSTOMIZADO sem datas, usar janela padrão dos últimos 30 dias
+        let start = dataInicial;
+        let end = dataFinal;
+        if (periodicidade === "CUSTOMIZADO" && (!start || !end)) {
+            const now = new Date();
+            const endDate = new Date(Date.UTC(
+                now.getUTCFullYear(),
+                now.getUTCMonth(),
+                now.getUTCDate(),
+                0, 0, 0
+            ));
+            const startDate = new Date(endDate);
+            startDate.setUTCDate(startDate.getUTCDate() - 30);
+            const iso = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}T00:00:00`;
+            start = iso(startDate);
+            end = iso(endDate);
+        }
 
-        const data = {
-            items,
-            period: {
-                start: null,
-                end: null,
+        const token = process.env.WAYBE_ERP_TOKEN;
+        if (!token) {
+            return new Response(
+                JSON.stringify({ error: "Token WAYBE_ERP_TOKEN não configurado no ambiente." }),
+                { status: 500 }
+            );
+        }
+
+        const extParams = new URLSearchParams({
+            periodicidade,
+            considerarFaturamento: String(considerarFaturamento),
+        });
+        if (start) extParams.set("dataInicial", start);
+        if (end) extParams.set("dataFinal", end);
+
+        const baseUrl = (process.env.WAYBE_ERP_BASE_URL || "https://api.waybe.com.br").replace(/\/$/, "");
+        const url = `${baseUrl}/relatorios/indicador-faturamento/top-10-produtos-vendidos?${extParams.toString()}`;
+
+        const resp = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json",
             },
-            currency: "BRL",
-        };
+        });
 
-        return new Response(JSON.stringify(data), { status: 200 });
+        if (!resp.ok) {
+            const text = await resp.text().catch(() => "");
+            console.error("WAYBE API error", resp.status, text);
+            return new Response(
+                JSON.stringify({ error: "Falha ao consultar API WAYBE", status: resp.status, details: text }),
+                { status: 502 }
+            );
+        }
+
+        const arr = (await resp.json()) as Array<{
+            produto: string;
+            quantidade: number;
+            faturamento: number;
+            custo?: number;
+        }>;
+
+        // Mantém exatamente os campos da API externa nos itens
+        const items = Array.isArray(arr) ? arr : [];
+
+        return new Response(
+            JSON.stringify({ items, currency: "BRL", period: { start: start || null, end: end || null } }),
+            { status: 200 }
+        );
     } catch (error) {
         console.error("Error getting top selling products:", error);
         return new Response(

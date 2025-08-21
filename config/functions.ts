@@ -30,8 +30,28 @@ export const functionsMap = {
   get_joke: get_joke,
 };
 
-export const get_top_selling_products = async () => {
-  const res = await fetch(`/api/functions/get_top_selling_products`).then((res) => res.json());
+export const get_top_selling_products = async ({
+  periodicidade,
+  considerarFaturamento,
+  dataInicial,
+  dataFinal,
+}: {
+  periodicidade: string;
+  considerarFaturamento: boolean;
+  dataInicial?: string;
+  dataFinal?: string;
+}) => {
+  const params = new URLSearchParams();
+  if (periodicidade) params.set("periodicidade", periodicidade);
+  if (typeof considerarFaturamento === "boolean")
+    params.set("considerarFaturamento", String(considerarFaturamento));
+  if (dataInicial) params.set("dataInicial", dataInicial);
+  if (dataFinal) params.set("dataFinal", dataFinal);
+
+  const url = `/api/functions/get_top_selling_products${
+    params.toString() ? `?${params.toString()}` : ""
+  }`;
+  const res = await fetch(url).then((res) => res.json());
   return res;
 };
 
@@ -101,3 +121,28 @@ export const request_month_input = async ({ prompt, placeholder }: { prompt?: st
 };
 
 Object.assign(functionsMap, { request_month_input });
+
+export const get_sales_details_by_product = async ({
+  idProdutoEmpresa,
+  nomeProduto,
+  dataInicial,
+  dataFinal,
+  page,
+  size,
+}: {
+  idProdutoEmpresa: string;
+  nomeProduto?: string;
+  dataInicial: string;
+  dataFinal: string;
+  page?: number;
+  size?: number;
+}) => {
+  const params = new URLSearchParams({ idProdutoEmpresa, dataInicial, dataFinal });
+  if (nomeProduto) params.set("nomeProduto", nomeProduto);
+  if (typeof page === "number") params.set("page", String(page));
+  if (typeof size === "number") params.set("size", String(size));
+  const res = await fetch(`/api/functions/get_sales_details_by_product?${params.toString()}`).then((r) => r.json());
+  return res;
+};
+
+Object.assign(functionsMap, { get_sales_details_by_product });

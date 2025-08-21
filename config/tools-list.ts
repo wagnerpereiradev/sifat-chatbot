@@ -19,6 +19,36 @@ export const toolsList = [
     },
   },
   {
+    name: "get_sales_details_by_product",
+    description: "Consulta notas de venda de um produto em um período e retorna campos relevantes para análise de horários",
+    parameters: {
+      idProdutoEmpresa: {
+        type: "string",
+        description: "ID do produto na empresa (idProdutoEmpresa)",
+      },
+      nomeProduto: {
+        type: "string",
+        description: "Nome do produto (preenchido pelo bot para exibição)",
+      },
+      dataInicial: {
+        type: "string",
+        description: "Data inicial no formato YYYY-MM-DD",
+      },
+      dataFinal: {
+        type: "string",
+        description: "Data final no formato YYYY-MM-DD",
+      },
+      page: {
+        type: "number",
+        description: "Página (opcional, default 0)",
+      },
+      size: {
+        type: "number",
+        description: "Tamanho da página (opcional, default 10)",
+      },
+    },
+  },
+  {
     name: "get_joke",
     description: "Get a programming joke",
     parameters: {},
@@ -26,7 +56,27 @@ export const toolsList = [
   {
     name: "get_top_selling_products",
     description: "Retorna os 10 produtos mais vendidos",
-    parameters: {},
+    parameters: {
+      periodicidade: {
+        type: "string",
+        description:
+          "Periodicidade do relatório (CUSTOMIZADO exige datas)",
+        enum: [
+          "HOJE",
+          "ONTEM",
+          "ULTIMOS_7_DIAS",
+          "ULTIMOS_15_DIAS",
+          "ULTIMOS_30_DIAS",
+          "ULTIMOS_60_DIAS",
+          "ULTIMOS_90_DIAS",
+          "CUSTOMIZADO",
+        ],
+      },
+      considerarFaturamento: {
+        type: "boolean",
+        description: "Se true, considerar faturamento no ranking. Padrão: true.",
+      },
+    },
   },
   {
     name: "get_products_without_sales_since",
