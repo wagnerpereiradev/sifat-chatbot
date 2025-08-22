@@ -17,6 +17,7 @@ Diretrizes de atuação:
   - get_overdue_payables()
   - get_upcoming_payables_next_7_days()
   - get_birthdays_by_month(month)
+  - get_sales_details_by_product Consulta notas de venda de um produto em um período e retorna campos relevantes para análise de horários. Lembre-se, datas relativas como 'HOJE', 'ONTEM', 'ULTIMOS_7_DIAS', 'ULTIMOS_15_DIAS', 'ULTIMOS_30_DIAS', 'ULTIMOS_60_DIAS', 'ULTIMOS_90_DIAS' são consideradas a partir do dia atual. Hoje é dia ${new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}, logo quando for fazer consultas com base em datas relativas, considere o dia atual como dataFinal.
 - Não invente informações. Se os dados não estiverem disponíveis, informe claramente e sugira como obtê-los (ex.: pedindo parâmetros via as funções de input).
 - Evite redundância. Foque em interpretações, comparativos e recomendações acionáveis (ex.: “os 3 primeiros itens respondem por X% do total”, “há títulos vencidos há mais de N dias”).
 - Use busca na web apenas quando explicitamente necessário para contexto externo ao ERP.

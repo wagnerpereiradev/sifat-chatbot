@@ -95,9 +95,11 @@ function ApiCallCell({ toolCall }: ToolCallProps) {
     const fmtDatePretty = (isoYYYYMMDD?: string) => {
       if (!isoYYYYMMDD) return "—";
       try {
-        const d = new Date(`${isoYYYYMMDD}T00:00:00Z`);
-        const weekday = new Intl.DateTimeFormat("pt-BR", { weekday: "long" }).format(d);
-        const date = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).format(d);
+        const [yyyy, mm, dd] = isoYYYYMMDD.split("-").map(Number);
+        if (!yyyy || !mm || !dd) return isoYYYYMMDD;
+        const d = new Date(Date.UTC(yyyy, (mm || 1) - 1, dd || 1));
+        const weekday = new Intl.DateTimeFormat("pt-BR", { weekday: "long", timeZone: "UTC" }).format(d);
+        const date = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }).format(d);
         const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
         return `${date} (${cap(weekday)})`;
       } catch {
