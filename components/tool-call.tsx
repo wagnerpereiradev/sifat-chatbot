@@ -9,7 +9,7 @@ import MonthInput from "./month-input";
 import TopProductsTable from "./top-products-table";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { coy } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip } from "recharts";
+import { ResponsiveContainer, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend } from "recharts";
 
 interface ToolCallProps {
   toolCall: ToolCallItem;
@@ -153,23 +153,56 @@ function ApiCallCell({ toolCall }: ToolCallProps) {
 
     try {
       const parsed = JSON.parse(toolCall.output);
-      const hourlyHistogram: Array<{ hour: string; count: number }> = Array.isArray(parsed?.hourlyHistogram) ? parsed.hourlyHistogram : [];
+      const rawHistogram = Array.isArray(parsed?.hourlyHistogram) ? parsed.hourlyHistogram : [];
+      const hourlyHistogram: Array<{ hour: string; saleCount: number; productQty: number; saleAmountTotal: number }> = rawHistogram.map((b: any) => ({
+        hour: String(b?.hour ?? "").padStart(2, "0"),
+        saleCount: Number(b?.saleCount ?? b?.count ?? 0),
+        productQty: Number(b?.productQty ?? 0),
+        saleAmountTotal: Number(b?.saleAmountTotal ?? 0),
+      }));
       const peakHours: Array<{ hour: string; count: number }> = Array.isArray(parsed?.peakHours) ? parsed.peakHours : [];
-      const totalElements: number = parsed?.totalElements ?? 0;
-      const chartData = hourlyHistogram.map((b) => ({ hour: `${b.hour}h`, count: b.count || 0 }));
+      const totalSales: number = parsed?.totalSales ?? parsed?.totalElements ?? 0;
+      const totalProductQty: number = parsed?.totalProductQty ?? 0;
+      const totalRevenue: number = parsed?.totalRevenue ?? 0;
+      const chartData = hourlyHistogram.map((b) => ({
+        hour: `${b.hour}h`,
+        saleCount: b.saleCount,
+        productQty: b.productQty,
+        avgProductsPerSale: b.saleCount > 0 ? b.productQty / b.saleCount : 0,
+        avgPricePerSale: b.saleCount > 0 ? b.saleAmountTotal / b.saleCount : 0,
+      }));
       const height = 260;
 
       const SalesTooltip = ({ active, payload, label }: any) => {
         if (!active || !payload || payload.length === 0) return null;
-        const value = Number(payload[0].value || 0);
+        const byKey: Record<string, number> = {};
+        for (const p of payload) {
+          if (p && typeof p.dataKey === "string") byKey[p.dataKey] = Number(p.value || 0);
+        }
+        const sales = Number(byKey["saleCount"] || 0);
+        const products = Number(byKey["productQty"] || 0);
+        const avgProducts = Number(byKey["avgProductsPerSale"] || 0);
+        const avgPrice = Number(byKey["avgPricePerSale"] || 0);
         return (
           <div className="rounded-md bg-white px-3 py-2 text-xs shadow-lg border border-stone-200">
             <div className="text-stone-500 mb-0.5">Horário</div>
             <div className="text-stone-900 font-semibold mb-1">{label}</div>
-            <div className="flex items-center gap-2">
-              <span className="inline-block h-2 w-2 rounded-full bg-[#0f67b2]"></span>
-              <div className="text-stone-700">
-                {value} venda{value === 1 ? "" : "s"}
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <span className="inline-block h-2 w-2 rounded-full bg-[#0f67b2]"></span>
+                <div className="text-stone-700">{sales} venda{sales === 1 ? "" : "s"}</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-block h-2 w-2 rounded-full bg-[#16a34a]"></span>
+                <div className="text-stone-700">{products} produto{products === 1 ? "" : "s"}</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-block h-2 w-2 rounded-full bg-[#8b5cf6]"></span>
+                <div className="text-stone-700">Média prod. por venda: {avgProducts.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-block h-2 w-2 rounded-full bg-[#ef4444]"></span>
+                <div className="text-stone-700">Preço médio por venda: {avgPrice.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</div>
               </div>
             </div>
           </div>
@@ -182,7 +215,11 @@ function ApiCallCell({ toolCall }: ToolCallProps) {
             <div className="rounded-2xl border border-[#0f67b2]/20 bg-white shadow-sm p-4">
               <div className="flex items-center justify-between">
                 <div className="text-stone-800 font-medium">Resumo</div>
-                <div className="text-xs text-stone-500">{totalElements} registros</div>
+                <div className="text-xs text-stone-500">
+                  {Number(totalProductQty || 0).toLocaleString("pt-BR")} produtos em {Number(totalSales || 0).toLocaleString("pt-BR")} vendas
+                  <span className="mx-1 text-stone-300">•</span>
+                  {Number(totalRevenue || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} faturamento
+                </div>
               </div>
               <div className="mt-3">{renderSummary(peakHours)}</div>
             </div>
@@ -202,9 +239,14 @@ function ApiCallCell({ toolCall }: ToolCallProps) {
                         tick={{ fontSize: 12, fontWeight: 600, fill: "#374151" }}
                         dy={6}
                       />
-                      <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#6b7280" }} width={36} />
+                      <YAxis yAxisId="left" allowDecimals tick={{ fontSize: 11, fill: "#6b7280" }} width={36} />
+                      <YAxis yAxisId="right" orientation="right" allowDecimals tick={{ fontSize: 11, fill: "#6b7280" }} width={48} />
                       <Tooltip content={<SalesTooltip />} cursor={{ stroke: '#0f67b2', strokeOpacity: 0.12 }} />
-                      <Line type="monotone" dataKey="count" stroke="#0f67b2" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                      <Legend verticalAlign="top" height={28} wrapperStyle={{ fontSize: 12 }} />
+                      <Line yAxisId="left" type="monotone" dataKey="saleCount" name="Vendas" stroke="#0f67b2" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                      <Line yAxisId="left" type="monotone" dataKey="productQty" name="Produtos" stroke="#16a34a" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                      <Line yAxisId="left" type="monotone" dataKey="avgProductsPerSale" name="Média prod. por venda" stroke="#8b5cf6" strokeDasharray="4 4" strokeWidth={2} dot={false} />
+                      <Line yAxisId="right" type="monotone" dataKey="avgPricePerSale" name="Preço médio por venda" stroke="#ef4444" strokeDasharray="3 3" strokeWidth={2} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
                 ) : (

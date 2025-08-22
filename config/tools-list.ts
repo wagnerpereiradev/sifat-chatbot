@@ -44,7 +44,7 @@ export const toolsList = [
       },
       size: {
         type: "number",
-        description: "Tamanho da página (opcional, default 10)",
+        description: "Tamanho da página (opcional, default 200)",
       },
     },
   },
