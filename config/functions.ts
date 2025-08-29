@@ -20,14 +20,8 @@ export const get_weather = async ({
   return res;
 };
 
-export const get_joke = async () => {
-  const res = await fetch(`/api/functions/get_joke`).then((res) => res.json());
-  return res;
-};
-
 export const functionsMap = {
-  get_weather: get_weather,
-  get_joke: get_joke,
+  get_weather: get_weather
 };
 
 export const get_top_selling_products = async ({
@@ -48,9 +42,8 @@ export const get_top_selling_products = async ({
   if (dataInicial) params.set("dataInicial", dataInicial);
   if (dataFinal) params.set("dataFinal", dataFinal);
 
-  const url = `/api/functions/get_top_selling_products${
-    params.toString() ? `?${params.toString()}` : ""
-  }`;
+  const url = `/api/functions/get_top_selling_products${params.toString() ? `?${params.toString()}` : ""
+    }`;
   const res = await fetch(url).then((res) => res.json());
   return res;
 };

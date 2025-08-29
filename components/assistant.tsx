@@ -3,6 +3,7 @@ import React from "react";
 import Chat from "./chat";
 import useConversationStore from "@/stores/useConversationStore";
 import { Item, processMessages } from "@/lib/assistant";
+import Sidebar from "./sidebar";
 
 export default function Assistant() {
   const { chatMessages, addConversationItem, addChatMessage, setAssistantLoading } =
@@ -49,7 +50,8 @@ export default function Assistant() {
   };
 
   return (
-    <div className="h-full w-full bg-white">
+    <div className="h-full w-full bg-white flex">
+      <Sidebar />
       <Chat
         items={chatMessages}
         onSendMessage={handleSendMessage}

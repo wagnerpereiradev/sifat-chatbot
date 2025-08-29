@@ -206,7 +206,7 @@ const Chat: React.FC<ChatProps> = ({
           )}
         </div>
 
-        <div className="flex-1 flex justify-center p-4 pt-0 fixed bottom-0 left-0 right-0">
+        <div className="flex-1 flex justify-center p-4 pt-0">
           <div className="flex items-center w-full md:max-w-[750px]">
             <div className="flex w-full items-center pb-4 md:pb-1">
               <div className="flex w-full flex-col gap-1.5 rounded-[20px] p-2.5 pl-1.5 transition-colors bg-white border border-stone-200 shadow-lg">
